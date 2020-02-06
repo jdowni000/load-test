@@ -1,0 +1,54 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-load-test
+  labels:
+    app: nginx
+    use: load-test
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: nginx
+      use: load-test
+  template:
+    metadata:
+      labels:
+        app: nginx
+        use: load-test
+    spec:
+      containers:
+      - name: nginx-load-test
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: nginx-load-test
+spec:
+  selector:
+    app: nginx
+    use: load-test
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-tester
+spec:
+  completions: 3
+  parallelism: 1
+  template:
+    metadata:
+      name: load-tester
+    spec:
+      containers:
+      - name: load-test
+        image: jdowni000/load-test:v1
+        command: ["bash", "ab -c 10 -n 100000 http://nginx-load-test/"]
+      restartPolicy: Never
